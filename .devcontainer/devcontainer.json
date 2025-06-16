@@ -1,0 +1,150 @@
+{
+  "name": "Python 3",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers-extra/features/curl-apt-get:1": {},
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "latest"
+    },
+    "ghcr.io/dhoeric/features/terraform-docs:1": {},
+    "ghcr.io/jajera/features/ag:1": {},
+    "ghcr.io/jajera/features/zip:1": {}
+  },
+  "customizations": {
+    "vscode": {
+    "settings": {
+        // File handling
+      "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+        "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
+
+        // Editor settings (aligned with root config)
+      "editor.formatOnSave": true,
+        "editor.rulers": [79],
+        "editor.wordWrap": "wordWrapColumn",
+        "editor.wordWrapColumn": 79,
+      "editor.tabSize": 4,
+      "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.trimAutoWhitespace": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "explicit",
+          "source.organizeImports": "explicit",
+          "source.fixAll.ruff": "explicit"
+        },
+
+        // Python-specific settings (unified with root)
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.terminal.activateEnvironment": false,
+        "python.formatting.provider": "none",
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit",
+            "source.fixAll.ruff": "explicit"
+          },
+          "editor.rulers": [79]
+        },
+
+        // Ruff configuration (unified)
+        "ruff.enable": true,
+        "ruff.fixAll": true,
+        "ruff.organizeImports": true,
+        "ruff.lint.enable": true,
+        "ruff.format.enable": true,
+        "ruff.codeAction.fixViolation": {
+          "enable": true
+        },
+
+        // MyPy configuration (unified)
+        "python.linting.enabled": true,
+        "python.linting.mypyEnabled": true,
+        "python.linting.mypyArgs": [
+          "--config-file=lambdas/pyproject.toml"
+        ],
+        "python.linting.flake8Enabled": false,
+        "python.linting.pylintEnabled": false,
+
+        // Testing configuration (unified)
+        "python.testing.pytestEnabled": true,
+      "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": [
+          "lambdas"
+        ],
+        "python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+        // Python analysis
+        "python.analysis.autoImportCompletions": true,
+        "python.analysis.typeCheckingMode": "strict",
+        "python.analysis.autoSearchPaths": true,
+        "python.analysis.diagnosticMode": "workspace",
+
+        // Terminal settings
+      "terminal.integrated.defaultProfile.linux": "bash",
+
+        // Workspace appearance
+      "workbench.iconTheme": "vscode-icons",
+      "workbench.colorTheme": "Visual Studio Dark",
+
+        // Git settings
+        "git.autofetch": true,
+        "git.confirmSync": false
+      },
+      "extensions": [
+        // Essential Python extensions
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-python.mypy",
+        "ms-python.debugpy",
+        "ms-python.vscode-pylance",
+        "VisualStudioExptTeam.vscodeintellicode",
+
+        // Documentation
+        "njpwerner.autodocstring",
+
+        // Code quality
+        "ms-python.bandit",
+        "tamasfe.even-better-toml",
+
+        // Terraform and AWS
+        "hashicorp.terraform",
+        "ms-azuretools.vscode-docker",
+
+        // General development
+        "davidanson.vscode-markdownlint",
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode",
+        "streetsidesoftware.code-spell-checker",
+        "vscode-icons-team.vscode-icons",
+
+        // YAML and JSON
+        "redhat.vscode-yaml",
+        "ms-vscode.vscode-json"
+      ]
+    }
+  },
+  "postCreateCommand": ".devcontainer/scripts/postCreate.sh",
+  "remoteUser": "root",
+  "workspaceFolder": "/workspaces/terraform-aws-iam-policy-guard",
+  "forwardPorts": [8000, 8080, 3000],
+  "portsAttributes": {
+    "8000": {
+      "label": "Python App",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "Web Server",
+      "onAutoForward": "notify"
+    },
+    "3000": {
+      "label": "Dev Server",
+      "onAutoForward": "notify"
+    }
+  }
+}

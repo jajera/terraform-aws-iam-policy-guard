@@ -1,0 +1,173 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # CRITICAL - Immediate remediation or investigation required
+  # ---------------------------------------------------------------------------
+  - name: "RootUserActivity"
+    description: "Monitor root user IAM activities"
+    severity: "CRITICAL"
+    # Remediation is not always possible for root user actions; alert with escalation
+    action: "alert"
+    conditions:
+      event_names:
+        - "CreatePolicy"
+        - "AttachUserPolicy"
+        - "AttachRolePolicy"
+        - "CreateUser"
+        - "CreateRole"
+        - "PutUserPolicy"
+        - "PutRolePolicy"
+      principals:
+        - "root"
+
+  - name: "DangerousInlinePolicy"
+    description: "Detects and remediates inline policies with wildcards or privilege escalation permissions."
+    severity: "CRITICAL"
+    action: "remediate"
+    conditions:
+      event_names: ["PutUserPolicy", "PutRolePolicy"]
+      policy_document_contains:
+        # Wildcard permissions
+        - '"Action":\s*"\*"'
+        - '"Action":\s*\[\s*"\*"'
+        - '"Resource":\s*"\*"'
+        - '"Resource":\s*\[\s*"\*"'
+        # Privilege escalation
+        - '"iam:PassRole"'
+
+  - name: "SecurityToolTampering"
+    description: "Detects attempts to disable or tamper with security services"
+    severity: "CRITICAL"
+    # Remediation is not always possible (e.g., cannot auto-restart GuardDuty); alert with escalation
+    action: "alert"
+    conditions:
+      event_names:
+        - "StopLogging"
+        - "DeleteTrail"
+        - "UpdateTrail"
+        - "DeleteDetector"    # GuardDuty
+        - "StopDetector"      # GuardDuty
+        - "DeleteMembers"     # GuardDuty
+        - "StopConfigurationRecorder" # AWS Config
+        - "DeleteDeliveryChannel"   # AWS Config
+
+  - name: "DangerousCustomerManagedPolicy"
+    description: "Detects and remediates customer-managed policies with wildcards or privilege escalation permissions"
+    severity: "CRITICAL"
+    action: "remediate"
+    conditions:
+      event_names: ["CreatePolicy"]
+      policy_document_contains:
+        - '"Action":\s*"\*"'
+        - '"Resource":\s*"\*"'
+        - '"iam:PassRole"'
+
+  # ---------------------------------------------------------------------------
+  # HIGH - Requires urgent investigation
+  # ---------------------------------------------------------------------------
+  - name: "PrivilegedInlinePolicy"
+    description: "Detects inline policies granting broad but not wildcard permissions (e.g., s3:*, ec2:*, iam:*)"
+    severity: "HIGH"
+    action: "alert"
+    conditions:
+      event_names: ["PutUserPolicy", "PutRolePolicy"]
+      policy_document_contains:
+        - '"Action":\s*"s3:\*"'
+        - '"Action":\s*"ec2:\*"'
+        - '"Action":\s*"iam:\*"'
+        - '"Action":\s*\[.*("s3:\*"|"ec2:\*"|"iam:\*").*\]'
+
+  - name: "InlinePolicyCreation"
+    description: "Monitor creation of any other inline policy (not matching above)"
+    severity: "HIGH"
+    action: "alert"
+    conditions:
+      event_names: ["PutUserPolicy", "PutRolePolicy"]
+
+  - name: "AdminPolicyAttachment"
+    description: "Detect when administrative policies are attached to users or roles"
+    severity: "HIGH"
+    action: "remediate"
+    conditions:
+      event_names: ["AttachUserPolicy", "AttachRolePolicy"]
+      policy_arns:
+        - "arn:aws:iam::aws:policy/AdministratorAccess"
+        - "arn:aws:iam::aws:policy/PowerUserAccess"
+        - "arn:aws:iam::aws:policy/IAMFullAccess"
+
+  - name: "PrivilegedPolicyAttachment"
+    description: "Detect attachment of custom policies with dangerous permissions"
+    severity: "HIGH"
+    action: "alert"
+    conditions:
+      event_names: ["AttachUserPolicy", "AttachRolePolicy"]
+      policy_document_contains:
+        - "iam:*"
+        - "ec2:*"
+        - "s3:*"
+
+  - name: "CrossAccountAssumeRole"
+    description: "Monitor cross-account assume role policy attachments"
+    severity: "HIGH"
+    action: "alert"
+    conditions:
+      event_names: ["AttachRolePolicy", "PutRolePolicy"]
+      resource_types: ["AWS::IAM::Role"]
+      policy_document_contains:
+        - "sts:AssumeRole"
+      cross_account_principals: true
+
+  - name: "PolicyDeletion"
+    description: "Monitor deletion of IAM policies"
+    severity: "HIGH"
+    action: "alert"
+    conditions:
+      event_names: ["DeletePolicy", "DeleteUserPolicy", "DeleteRolePolicy"]
+
+  - name: "IAMLoginProfileChanges"
+    description: "Monitors creation or deletion of console login profiles for IAM users"
+    severity: "HIGH"
+    action: "alert"
+    conditions:
+      event_names: ["CreateLoginProfile", "DeleteLoginPolicy"]
+
+  - name: "AccountPasswordPolicyChanged"
+    description: "Monitors changes to the account-wide password policy"
+    severity: "HIGH"
+    action: "alert"
+    conditions:
+      event_names: ["UpdateAccountPasswordPolicy", "DeleteAccountPasswordPolicy"]
+
+  # ---------------------------------------------------------------------------
+  # MEDIUM - Security awareness and configuration monitoring
+  # ---------------------------------------------------------------------------
+  - name: "PolicyCreation"
+    description: "Monitor creation of new IAM policies"
+    severity: "MEDIUM"
+    action: "alert"
+    conditions:
+      event_names: ["CreatePolicy"]
+
+  - name: "AccessKeyCreated"
+    description: "Monitors the creation of new IAM access keys"
+    severity: "MEDIUM"
+    action: "alert"
+    conditions:
+      event_names: ["CreateAccessKey"]
+
+  - name: "ConsoleLoginWithoutMFA"
+    description: "Monitor IAM users created without MFA enforcement"
+    severity: "MEDIUM"
+    action: "alert"
+    conditions:
+      event_names: ["CreateUser"]
+      missing_mfa_requirement: true
+
+  # ---------------------------------------------------------------------------
+  # LOW - For logging and auditing purposes
+  # ---------------------------------------------------------------------------
+  - name: "ServiceLinkedRoleCreation"
+    description: "Monitor creation of service-linked roles"
+    severity: "LOW"
+    action: "log"
+    conditions:
+      event_names: ["CreateServiceLinkedRole"]

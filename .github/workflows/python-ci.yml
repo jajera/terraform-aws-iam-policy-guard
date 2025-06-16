@@ -1,0 +1,66 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'lambdas/**'
+      - '.github/workflows/python-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'lambdas/**'
+      - '.github/workflows/python-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+      fail-fast: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        cd lambdas
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Run basic tests
+      run: |
+        cd lambdas
+        python run_tests.py
+
+    - name: Run comprehensive tests
+      run: |
+        cd lambdas
+        pytest -v
+
+    - name: Check code quality
+      run: |
+        cd lambdas
+
+        echo "Checking files (excluding *.zip):"
+        find . -type f \( -name "*.py" \) ! -name "*.zip"
+
+        # Run Ruff only on .py files
+        find . -type f -name "*.py" ! -path "*/.*" -print0 | xargs -0 ruff check
+
+        # Run MyPy type checking
+        find . -type f -name "*.py" ! -path "*/.*" -print0 | xargs -0 dirname | sort -u | xargs -n1 mypy
+
+    - name: Test package building
+      run: |
+        cd lambdas
+        ./build-lambda-packages.sh
+        ls -la dist/

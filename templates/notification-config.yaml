@@ -1,0 +1,119 @@
+# Notification Configuration
+# This file defines how violations and events are formatted for Slack notifications
+
+# Severity to color mapping for Slack message attachments
+severity_colors:
+  CRITICAL: "#E01E5A"    # Red - Critical/Emergency
+  HIGH: "#FF5733"        # Orange-Red - High Priority
+  MEDIUM: "#FFCC00"      # Yellow - Medium Priority
+  LOW: "#36C5F0"         # Blue - Low Priority/Info
+  INFO: "#2EB67D"        # Green - Success/Info
+
+# Event name to status mapping for dynamic coloring
+event_status_mapping:
+  # Policy Creation Events
+  CreatePolicy: "POLICY_CREATED"
+  CreatePolicyVersion: "POLICY_UPDATED"
+
+  # Policy Deletion Events
+  DeletePolicy: "POLICY_DELETED"
+  DeletePolicyVersion: "POLICY_UPDATED"
+  DeleteUserPolicy: "POLICY_DELETED"
+  DeleteRolePolicy: "POLICY_DELETED"
+
+  # Policy Attachment Events
+  AttachUserPolicy: "POLICY_ATTACHED"
+  AttachRolePolicy: "POLICY_ATTACHED"
+  AttachGroupPolicy: "POLICY_ATTACHED"
+
+  # Policy Detachment Events
+  DetachUserPolicy: "POLICY_DETACHED"
+  DetachRolePolicy: "POLICY_DETACHED"
+  DetachGroupPolicy: "POLICY_DETACHED"
+
+  # Inline Policy Events
+  PutUserPolicy: "INLINE_POLICY_CREATED"
+  PutRolePolicy: "INLINE_POLICY_CREATED"
+  PutGroupPolicy: "INLINE_POLICY_CREATED"
+
+# Status to color mapping (overrides severity colors for specific event types)
+status_colors:
+  POLICY_CREATED: "#2EB67D"     # Green - New policy created
+  POLICY_DELETED: "#E01E5A"     # Red - Policy deleted
+  POLICY_UPDATED: "#FFCC00"     # Yellow - Policy modified
+  POLICY_ATTACHED: "#36C5F0"    # Blue - Policy attached
+  POLICY_DETACHED: "#FF5733"    # Orange - Policy detached
+  INLINE_POLICY_CREATED: "#9C27B0"  # Purple - Inline policy
+
+# Slack message formatting configuration
+slack_config:
+  # Default message structure
+  message_title: "🚨 IAM Policy Violation Detected"
+
+  # Fields to include in Slack attachment
+  message_fields:
+    - name: "Rule"
+      field: "rule_name"
+      short: true
+    - name: "Severity"
+      field: "severity"
+      short: true
+    - name: "Event"
+      field: "event_name"
+      short: true
+    - name: "User"
+      field: "user_identity.userName"
+      short: true
+    - name: "Source IP"
+      field: "sourceIPAddress"
+      short: true
+    - name: "Region"
+      field: "awsRegion"
+      short: true
+    - name: "Description"
+      field: "description"
+      short: false
+    - name: "Timestamp"
+      field: "timestamp"
+      short: true
+
+  # Footer information
+  footer: "IAM Policy Monitor"
+  footer_icon: "https://aws.amazon.com/favicon.ico"
+
+  # Message formatting options
+  markdown_in: ["text", "pretext", "fields"]
+  unfurl_links: false
+  unfurl_media: false
+
+# Notification thresholds and rate limiting
+notification_settings:
+  # Rate limiting to prevent spam
+  rate_limit:
+    max_per_minute: 5
+    max_per_hour: 20
+    max_per_day: 100
+
+  # Severity threshold (only send notifications for these severities or higher)
+  min_severity: "MEDIUM"  # LOW, MEDIUM, HIGH, CRITICAL
+
+  # Event grouping (group similar events within time window)
+  grouping:
+    enabled: true
+    window_minutes: 5
+    max_group_size: 10
+
+# Custom emoji mapping for different violation types
+emoji_mapping:
+  CRITICAL: "🚨"
+  HIGH: "⚠️"
+  MEDIUM: "📋"
+  LOW: "ℹ️"
+
+  # Event-specific emojis
+  CreatePolicy: "📝"
+  DeletePolicy: "🗑️"
+  AttachUserPolicy: "🔗"
+  DetachUserPolicy: "🔓"
+  PutUserPolicy: "📄"
+  root: "👑"  # Root user activities

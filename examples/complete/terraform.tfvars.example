@@ -1,0 +1,11 @@
+# Example Terraform variables file for IAM Policy Monitor
+# Copy this file to terraform.tfvars and customize the values
+
+# Configuration
+# Email for alerts (REQUIRED)
+alert_email = "your-email@company.com"
+
+slack_webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+# Optional
+owner = "security-team"
