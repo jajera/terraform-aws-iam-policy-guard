@@ -1,0 +1,20 @@
+{
+  "dry_run": false,
+  "allowed_actions": [
+    "detach_policy",
+    "delete_inline_policy",
+    "delete_policy"
+  ],
+  "safety_checks": {
+    "require_approval": false,
+    "exclude_patterns": [
+      "*Admin*",
+      "*Root*",
+      "OrganizationAccountAccessRole",
+      "AWSServiceRoleFor*"
+    ]
+  },
+  "protected_policies": [
+    "arn:aws:iam::*:policy/*Root*"
+  ]
+}

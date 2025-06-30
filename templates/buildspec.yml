@@ -1,0 +1,167 @@
+version: 0.2
+
+# NOTE: Copied from root; no changes other than comments and location.
+# This CodeBuild definition runs end-to-end IAM tests that intentionally
+# create and then remediate dangerous IAM policies.  It is deployed only
+# when `create_tests = true`.
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.13
+    commands:
+      - echo "Setting up test environment..."
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - export ACCOUNT_ID
+      - echo "AWS Account ID - $ACCOUNT_ID"
+
+  pre_build:
+    commands:
+      - echo "Starting IAM Policy Monitor Automated Tests"
+      - echo "Test started at $(date)"
+      - TEST_RESULTS=""
+      - MAX_WAIT=60
+      - export MAX_WAIT
+
+  build:
+    commands:
+      - |
+        # Start a persistent shell session for all tests
+        set -e
+
+        # ------------------------
+        # Helper: ensure entities exist
+        # ------------------------
+        ensure_user() {
+          local uname="$1";
+          if ! aws iam get-user --user-name "$uname" >/dev/null 2>&1; then
+            echo "Creating user $uname ...";
+            aws iam create-user --user-name "$uname";
+          fi;
+        }
+
+        ensure_role() {
+          local rname="$1";
+          if ! aws iam get-role --role-name "$rname" >/dev/null 2>&1; then
+            echo "Creating role $rname ...";
+            aws iam create-role \
+              --role-name "$rname" \
+              --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}' ;
+          fi;
+        }
+
+        USER_NAME="iam-monitor-test-user"
+        ROLE_NAME="iam-monitor-test-role"
+
+        # Make sure resources exist (cleanup from prior run may still be propagating)
+        ensure_user "$USER_NAME"
+        ensure_role "$ROLE_NAME"
+
+        wait_for_remediation() {
+          local cmd="$1"; local success_msg="$2"; local fail_msg="$3";
+          local max_wait=${MAX_WAIT:-60}; local interval=5; local waited=0;
+          while true; do
+            local out; out=$(eval "$cmd") && status=$? || status=$?;
+            if [[ $status -ne 0 || -z "$out" ]]; then
+              echo "$success_msg"; TEST_RESULTS="$TEST_RESULTS\n$success_msg"; return;
+            fi;
+            if [[ $waited -ge $max_wait ]]; then
+              echo "$fail_msg"; TEST_RESULTS="$TEST_RESULTS\n$fail_msg"; return;
+            fi;
+            sleep $interval; waited=$((waited+interval));
+          done;
+        }
+
+        echo "USER TESTS"
+        echo "=============================================="
+        echo "Creating test user..."
+        aws iam create-user --user-name iam-monitor-test-user || echo "User already exists"
+
+        echo "Test 1 - Attach Admin Policy to User (HIGH)"
+        aws iam attach-user-policy --user-name iam-monitor-test-user --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+        wait_for_remediation \
+          "aws iam list-attached-user-policies --user-name iam-monitor-test-user --query 'AttachedPolicies[?PolicyArn==\`arn:aws:iam::aws:policy/AdministratorAccess\`]' --output text" \
+          "User Admin Policy Test - PASS" \
+          "User Admin Policy Test - FAIL"
+
+        echo "Test 2 - Add Inline Admin Policy to User (CRITICAL)"
+        aws iam put-user-policy --user-name iam-monitor-test-user --policy-name DangerousInlinePolicy --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"*","Resource":"*"}]}'
+        wait_for_remediation \
+          "! aws iam get-user-policy --user-name iam-monitor-test-user --policy-name DangerousInlinePolicy >/dev/null 2>&1" \
+          "User Inline Policy Test - PASS" \
+          "User Inline Policy Test - FAIL"
+
+        echo "Test 3 - Create and Attach Customer-Managed Policy to User (HIGH)"
+        aws iam create-policy --policy-name CustomAdminPolicy --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"*","Resource":"*"}]}' || echo "Policy may already exist"
+        aws iam attach-user-policy --user-name iam-monitor-test-user --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CustomAdminPolicy
+        wait_for_remediation \
+          "aws iam list-attached-user-policies --user-name iam-monitor-test-user --query 'AttachedPolicies[?PolicyArn==\`arn:aws:iam::$ACCOUNT_ID:policy/CustomAdminPolicy\`]' --output text" \
+          "User Custom Policy Test - PASS" \
+          "User Custom Policy Test - FAIL"
+
+        echo ""
+        echo "ROLE TESTS"
+        echo "=============================================="
+        echo "Creating test role..."
+        aws iam create-role --role-name iam-monitor-test-role --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ec2.amazonaws.com"},"Action":"sts:AssumeRole"}]}' || echo "Role already exists"
+
+        echo "Test 4 - Attach Admin Policy to Role (HIGH)"
+        aws iam attach-role-policy --role-name iam-monitor-test-role --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+        wait_for_remediation \
+          "aws iam list-attached-role-policies --role-name iam-monitor-test-role --query 'AttachedPolicies[?PolicyArn==\`arn:aws:iam::aws:policy/AdministratorAccess\`]' --output text" \
+          "Role Admin Policy Test - PASS" \
+          "Role Admin Policy Test - FAIL"
+
+        echo "Test 5 - Add Inline Admin Policy to Role (CRITICAL)"
+        aws iam put-role-policy --role-name iam-monitor-test-role --policy-name DangerousInlinePolicy --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"*","Resource":"*"}]}'
+        wait_for_remediation \
+          "! aws iam get-role-policy --role-name iam-monitor-test-role --policy-name DangerousInlinePolicy >/dev/null 2>&1" \
+          "Role Inline Policy Test - PASS" \
+          "Role Inline Policy Test - FAIL"
+
+  post_build:
+    commands:
+      - echo ""
+      - echo "TEST RESULTS SUMMARY"
+      - echo "=============================================="
+      - echo -e "$TEST_RESULTS"
+      - echo "=============================================="
+      - echo "Test completed at $(date)"
+      - PASS_COUNT=$(grep -o "PASS" <<< "$TEST_RESULTS" | wc -l)
+      - FAIL_COUNT=$(grep -o "FAIL" <<< "$TEST_RESULTS" | wc -l)
+      - TOTAL_TESTS=$((PASS_COUNT + FAIL_COUNT))
+      - echo "Total Tests - $TOTAL_TESTS"
+      - echo "Passed - $PASS_COUNT"
+      - echo "Failed - $FAIL_COUNT"
+      - echo "{\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"total\":$TOTAL_TESTS,\"passed\":$PASS_COUNT,\"failed\":$FAIL_COUNT}"
+      - |
+        if [[ $FAIL_COUNT -gt 0 ]]; then RESULT=0; else RESULT=1; fi
+        aws cloudwatch put-metric-data --namespace "IAMPolicyMonitorTests" --metric-name "EndToEndStatus" --unit Count --value $RESULT
+      - echo ""
+      - echo "CLEANUP"
+      - echo "=============================================="
+      - echo "Cleaning up test resources..."
+      - |
+        quiet() { "$@" >/dev/null 2>&1 || true; }
+        quiet aws iam delete-user-policy --user-name iam-monitor-test-user --policy-name DangerousInlinePolicy
+        quiet aws iam detach-user-policy --user-name iam-monitor-test-user --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+        quiet aws iam detach-user-policy --user-name iam-monitor-test-user --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CustomAdminPolicy
+        quiet aws iam delete-user --user-name iam-monitor-test-user
+        quiet aws iam delete-role-policy --role-name iam-monitor-test-role --policy-name DangerousInlinePolicy
+        quiet aws iam detach-role-policy --role-name iam-monitor-test-role --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+        quiet aws iam detach-role-policy --role-name iam-monitor-test-role --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CustomAdminPolicy
+        quiet aws iam delete-role --role-name iam-monitor-test-role
+        quiet aws iam delete-policy --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CustomAdminPolicy
+        echo "Cleanup completed"
+      - |
+        if [[ $FAIL_COUNT -gt 0 ]]; then
+          echo "Some tests failed - IAM Policy Monitor may need attention"
+          exit 1
+        else
+          echo "All tests passed - IAM Policy Monitor is working correctly"
+        fi
+
+artifacts:
+  files:
+    - '**/*'
+  name: iam-policy-monitor-test-results

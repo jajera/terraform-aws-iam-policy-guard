@@ -1,0 +1,6 @@
+# Example Terraform variables file for IAM Policy Monitor
+# Copy this file to terraform.tfvars and customize the values
+
+# Basic Configuration
+# Email for alerts (REQUIRED)
+alert_email = "your-email@company.com"
