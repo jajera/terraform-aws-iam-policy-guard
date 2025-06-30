@@ -4,15 +4,14 @@ The **absolute simplest** deployment of the IAM Policy Monitor. Perfect for firs
 
 ## What This Example Provides
 
-✅ **Monitors IAM Events**: Detects policy violations
-✅ **Email Alerts**: Sends notifications to your email
-✅ **Audit Logging**: Records violations to S3
-✅ **Metrics**: Basic CloudWatch metrics
-✅ **Dashboard**: Simple monitoring dashboard for test visibility
-
-❌ **No Changes**: Won't modify any IAM policies (safe to test!)
-❌ **No Slack**: Email only (simple setup)
-❌ **No Remediation**: Detection only (no automated fixes)
+- ✅ **Monitors IAM Events**: Detects policy violations
+- ✅ **Email Alerts**: Sends notifications to your email
+- ✅ **Audit Logging**: Records violations to S3
+- ✅ **Metrics**: Basic CloudWatch metrics
+- ✅ **Dashboard**: Simple monitoring dashboard for test visibility
+- ❌ **No Changes**: Won't modify any IAM policies (safe to test!)
+- ❌ **No Slack**: Email only (simple setup)
+- ❌ **No Remediation**: Detection only (no automated fixes)
 
 ## Architecture Overview
 
