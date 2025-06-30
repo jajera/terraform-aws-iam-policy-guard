@@ -158,8 +158,8 @@ resource "aws_s3_object" "lambda_package" {
   key    = "lambda-artifacts/lambda-package.zip"
 
   # Use pre-built package if it exists, otherwise use Terraform-built package
-  source = fileexists("${path.module}/lambdas/dist/lambda-package.zip") ? "${path.module}/lambdas/dist/lambda-package.zip" : data.archive_file.lambda_terraform.output_path
-  etag   = fileexists("${path.module}/lambdas/dist/lambda-package.zip") ? filemd5("${path.module}/lambdas/dist/lambda-package.zip") : data.archive_file.lambda_terraform.output_md5
+  source      = fileexists("${path.module}/lambdas/dist/lambda-package.zip") ? "${path.module}/lambdas/dist/lambda-package.zip" : data.archive_file.lambda_terraform.output_path
+  source_hash = fileexists("${path.module}/lambdas/dist/lambda-package.zip") ? filemd5("${path.module}/lambdas/dist/lambda-package.zip") : data.archive_file.lambda_terraform.output_md5
 
   tags = local.common_tags
 }
