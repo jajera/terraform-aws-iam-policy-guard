@@ -4,14 +4,14 @@ A deployment of the IAM Policy Monitor with comprehensive monitoring, alerting, 
 
 ## What This Example Provides
 
-✅ **Complete Event-Driven Architecture**: EventBridge + 6 Lambda functions
-✅ **Dual Notification Channels**: Email alerts + Rich Slack notifications
-✅ **Automated Remediation**: Safe policy detachment and cleanup
-✅ **Comprehensive Monitoring**: CloudWatch dashboard + metrics + alarms
-✅ **Priority Alerting**: Separate high-severity notification channel
-✅ **Audit Compliance**: S3 logging with structured audit trail
-✅ **AI-Powered Risk Analysis**: Contextual severity scoring via Amazon Bedrock
-✅ **Production Safety**: Configurable safety controls and rate limiting
+- ✅ **Complete Event-Driven Architecture**: EventBridge + 6 Lambda functions
+- ✅ **Dual Notification Channels**: Email alerts + Rich Slack notifications
+- ✅ **Automated Remediation**: Safe policy detachment and cleanup
+- ✅ **Comprehensive Monitoring**: CloudWatch dashboard + metrics + alarms
+- ✅ **Priority Alerting**: Separate high-severity notification channel
+- ✅ **Audit Compliance**: S3 logging with structured audit trail
+- ✅ **AI-Powered Risk Analysis**: Contextual severity scoring via Amazon Bedrock
+- ✅ **Production Safety**: Configurable safety controls and rate limiting
 
 ## Architecture Overview
 
